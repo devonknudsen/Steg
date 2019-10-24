@@ -1,13 +1,12 @@
 import sys
 
-s = [0x0, 0xff, 0x0, 0x0, 0xff, 0x0]
-SENTINEL = bytearray(s)
+SENTINEL = bytearray([0x0, 0xff, 0x0, 0x0, 0xff, 0x0])
 
-def store(method, wrapper, h, offset, interval):
+def store(method, wrapper, hidden, offset, interval):
     if(method == 'B'):
         x = 0
-        while(x < len(h)):
-            wrapper[offset] = h[x]
+        while(x < len(hidden)):
+            wrapper[offset] = hidden[x]
             offset += interval
             x += 1
         
@@ -27,10 +26,10 @@ def store(method, wrapper, h, offset, interval):
                 
                 # 128 is decimal for binary 10000000
                 # if hidden bit is a 1, add it to wrapper in LSB place
-                wrapper[offset] |= ((h[j] & 128) >> 7)
+                wrapper[offset] |= ((hidden[j] & 128) >> 7)
                 
                 # move to the next bit in the current hiddden byte
-                h[j] = (h[j] << 1) & (2 ** 8 - 1)
+                hidden[j] = (hidden[j] << 1) & (2 ** 8 - 1)
                 offset += interval
             
             j += 1
@@ -51,31 +50,25 @@ def store(method, wrapper, h, offset, interval):
 def retrieve(method, wrapper, offset, interval):
     h = bytearray()
     if(method == 'B'):
+        biteArr = bytearray()
+        
+        for z in range(0, 6):
+            biteArr.append(wrapper[offset])
+            offset += interval
+            
         while(offset < len(wrapper)):
-            currByte = wrapper[offset]
-            if(currByte == SENTINEL[0]):
-                sentFinder = bytearray()
-                
-                for sByte in SENTINEL:
-                    
-                    if(currByte != sByte):
-                        for b in sentFinder:
-                            h.append(b)
-                            
-                        break
-                    
-                    sentFinder.append(currByte)
-                    offset += interval
-                    currByte = wrapper[offset]
-                    
-                if(sentFinder == SENTINEL):
-                    return h
-            else:
-                h.append(currByte)
+            if(biteArr != SENTINEL):
+                h.append(biteArr[0])
+                biteArr = biteArr[1:]
+                biteArr.append(wrapper[offset])
                 offset += interval
+            else:
+                return h
     
     elif(method == 'b'):
-        while(offset < len(wrapper)):
+        bitArr = bytearray()
+        
+        for k in range(0, 6):
             b = 0
             for j in range(0, 8):
                 # if the LSB of wrapper byte is a 1 add, if not, keep 0
@@ -84,39 +77,28 @@ def retrieve(method, wrapper, offset, interval):
                     # move b over to the left one bit
                     b = (b << 1) & (2 ** 8 - 1)
                     offset += interval
-            
-            if(b == SENTINEL[0]):
-                print('{} == {}'.format(b, SENTINEL[0]))
-                # print(bin(SENTINEL[0]))
-                sF = bytearray()
-                sF.append(b)
-                offset += interval
                 
-                for m in range(1, len(SENTINEL)):
-                    b = 0
-                    for k in range(0, 8):
-                        # if the LSB of wrapper byte is a 1 add, if not, keep 0
-                        b |= (wrapper[offset] & 1)
-                        if(k < 7):
-                            # move b over to the left one bit
-                            b = (b << 1) & (2 ** 8 - 1)
-                            offset += interval
-                    
-                    if(b != SENTINEL[m]):
-                        h.append(b)
-                        for byte in sF:
-                            h.append(byte)
-                        
-                        break
-                    else:
-                        sF.append(b)
+            bitArr.append(b)
+            offset += interval
+
+        while(offset < len(wrapper)):
+            if(bitArr != SENTINEL):
+                b = 0
+                h.append(bitArr[0])
+                bitArr = bitArr[1:]
+                for j in range(0, 8):
+                    # if the LSB of wrapper byte is a 1 add, if not, keep 0
+                    b |= (wrapper[offset] & 1)
+                    if(j < 7):
+                        # move b over to the left one bit
+                        b = (b << 1) & (2 ** 8 - 1)
                         offset += interval
                 
-                if(sF == SENTINEL):
-                    return h
-            else:
-                h.append(b)
+                bitArr.append(b)
                 offset += interval
+                
+            else:
+                return h
                         
 
 # MAIN
