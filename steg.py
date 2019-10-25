@@ -4,50 +4,39 @@
 
 import sys
 
-# used to tell any retrieval method that they have found the end of the hidden image/message
+# used to tell any retrieval method that they have reached 
+# end of the hidden image/message within wrapper
 SENTINEL = bytearray([0x0, 0xff, 0x0, 0x0, 0xff, 0x0])
 
-# method to store a defined file's data within a wrapper file
+# method to store a defined file's data within a wrapper
 def store(method, wrapper, hidden, offset, interval):
-    # byte method of storing
+    
+    # byte method for storing
     if(method == 'B'):
-        
-        # add file to be hidden's bytes
         x = 0
         while(x < len(hidden)):
             wrapper[offset] = hidden[x]
             offset += interval
             x += 1
         
-        # add sentinel bytes
         x = 0
         while (x < len(SENTINEL)):
             wrapper[offset] = SENTINEL[x]
             offset += interval
             x += 1
     
-    # bit method of storing
+    # bit method for storing
     elif(method == 'b'):
-        
-        # add file to be hidden's bytes, bit by bit
         j = 0
         while(j < len(hidden)):
             for k in range(0, 8):
-                
-                # 254 is decimal for binary 11111110
                 wrapper[offset] &= 254
-                
-                # 128 is decimal for binary 10000000
-                # if hidden bit is a 1, add it to wrapper in LSB place
                 wrapper[offset] |= ((hidden[j] & 128) >> 7)
-                
-                # bit shift left once in the current byte to be hidden
                 hidden[j] = (hidden[j] << 1) & (2 ** 8 - 1)
                 offset += interval
             
             j += 1
-        
-        # add sentinel bytes, bit by bit
+            
         j = 0
         while(j < len(SENTINEL)):
             for k in range(0, 8):
@@ -60,9 +49,10 @@ def store(method, wrapper, hidden, offset, interval):
         
     return wrapper
                 
-# method to retreive hidden data from a defined wrapper file 
+# method to retrieve hidden data from a defined wrapper file 
 def retrieve(method, wrapper, offset, interval):
-    # byte array to contain data from the retreived hidden file
+    
+    # byte array to contain bytes of the retrieved hidden file
     hidden = bytearray()
     
     # byte method for retrieving
@@ -89,10 +79,8 @@ def retrieve(method, wrapper, offset, interval):
         for k in range(0, 6):
             b = 0
             for j in range(0, 8):
-                # if the LSB of wrapper byte is a 1 add, if not, keep 0
                 b |= (wrapper[offset] & 1)
                 if(j < 7):
-                    # bit shift left once
                     b = (b << 1) & (2 ** 8 - 1)
                     offset += interval
                 
@@ -105,10 +93,8 @@ def retrieve(method, wrapper, offset, interval):
                 hidden.append(bitArr[0])
                 bitArr = bitArr[1:]
                 for j in range(0, 8):
-                    # if the LSB of wrapper byte is a 1 add, if not, keep 0
                     b |= (wrapper[offset] & 1)
                     if(j < 7):
-                        # move b over to the left one bit
                         b = (b << 1) & (2 ** 8 - 1)
                         offset += interval
                 
@@ -122,43 +108,30 @@ def retrieve(method, wrapper, offset, interval):
 # MAIN
 sR = sys.argv[1][1]
 method = sys.argv[2][1]
-
-interval = 1
-
 offset = int(sys.argv[3][2:])
     
-if(method == 'b'):
-    if(sys.argv[4][:2] == '-i'):
-        interval = int(sys.argv[4][2:])
-        with open(sys.argv[5][2:], 'rb') as wImg:
-            wrapper = wImg.read()
-            wBytes = bytearray(wrapper)
-        if(sR == 's'):
-            with open(sys.argv[6][2:], 'rb') as hImg:
-                hidden = hImg.read()
-                hBytes = bytearray(hidden)        
-    else:
-        with open(sys.argv[4][2:], 'rb') as wImg:
-            wrapper = wImg.read()
-            wBytes = bytearray(wrapper)
-        if(sR == 's'):
-            with open(sys.argv[5][2:], 'rb') as hImg:
-                hidden = hImg.read()
-                hBytes = bytearray(hidden)  
-elif(method == 'B'):
+if(sys.argv[4][:2] == '-i'):
     interval = int(sys.argv[4][2:])
     with open(sys.argv[5][2:], 'rb') as wImg:
-            wrapper = wImg.read()
-            wBytes = bytearray(wrapper)
+        wrapper = wImg.read()
+        wBytes = bytearray(wrapper)
     if(sR == 's'):
-            with open(sys.argv[6][2:], 'rb') as hImg:
-                hidden = hImg.read()
-                hBytes = bytearray(hidden)
-    
+        with open(sys.argv[6][2:], 'rb') as hImg:
+            hidden = hImg.read()
+            hBytes = bytearray(hidden)
+else:
+    interval = 1
+    with open(sys.argv[4][2:], 'rb') as wImg:
+        wrapper = wImg.read()
+        wBytes = bytearray(wrapper)
+    if(sR == 's'):
+        with open(sys.argv[5][2:], 'rb') as hImg:
+            hidden = hImg.read()
+            hBytes = bytearray(hidden)
+            
 if(sR == 's'):
     newWrap = store(method, wBytes, hBytes, offset, interval)
     sys.stdout.buffer.write(newWrap)
-    
-if(sR == 'r'):
+elif(sR == 'r'):
     newH = retrieve(method, wBytes, offset, interval)
     sys.stdout.buffer.write(newH)
