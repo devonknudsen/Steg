@@ -106,10 +106,16 @@ def retrieve(method, wrapper, offset, interval):
                         
 
 # MAIN
+
+# gets 's' or 'r' from command line
 sR = sys.argv[1][1]
+# gets bit 'b' or byte 'B' method from command line
 method = sys.argv[2][1]
+# gets the offset value
 offset = int(sys.argv[3][2:])
-    
+ 
+# checks if there is an interval and if so, gets its value
+# opens file and sets the wrapper file   
 if(sys.argv[4][:2] == '-i'):
     interval = int(sys.argv[4][2:])
     with open(sys.argv[5][2:], 'rb') as wImg:
@@ -129,9 +135,12 @@ else:
             hidden = hImg.read()
             hBytes = bytearray(hidden)
             
+# performs storing method and direct file to output           
 if(sR == 's'):
     newWrap = store(method, wBytes, hBytes, offset, interval)
     sys.stdout.buffer.write(newWrap)
+    
+# performs retrieving method and direct file to output
 elif(sR == 'r'):
     newH = retrieve(method, wBytes, offset, interval)
     sys.stdout.buffer.write(newH)
